@@ -119,7 +119,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/infiber/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -130,3 +131,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://86.48.21.76",
     "http://localhost:3000",
 ]
+# Para que funcione en /infiber/
+FORCE_SCRIPT_NAME = '/infiber'
+STATIC_URL = '/infiber/static/'
