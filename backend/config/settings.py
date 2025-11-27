@@ -40,6 +40,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    # Apps propias
+    'apps.usuarios',
+    'apps.planes',
+    'apps.contratos',
+    'apps.facturas',
+    'apps.pagos',
+    'apps.tickets',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +141,6 @@ CORS_ALLOWED_ORIGINS = [
 # Para que funcione en /infiber/
 FORCE_SCRIPT_NAME = '/infiber'
 STATIC_URL = '/infiber/static/'
+
+# Usuario personalizado
+AUTH_USER_MODEL = 'usuarios.Usuario'
