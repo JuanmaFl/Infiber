@@ -15,15 +15,15 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import environ
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*=5lnldp0z!p^8k9%cj+tqu@%fllg*h6$u$!8dh6gx%ndh7and'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = ['86.48.21.76', 'localhost', '127.0.0.1']
 
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.facturas',
     'apps.pagos',
     'apps.tickets',
+    'apps.chatbot',
 ]
 
 MIDDLEWARE = [
@@ -158,3 +159,6 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
 }
+
+# OpenAI
+OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
