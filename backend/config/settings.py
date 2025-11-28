@@ -162,3 +162,9 @@ SIMPLE_JWT = {
 
 # OpenAI
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
+# Pagos
+WOMPI_PUBLIC_KEY = env('WOMPI_PUBLIC_KEY', default='')
+PAYU_API_KEY = env('PAYU_API_KEY', default='')
+PAYU_API_LOGIN = env('PAYU_API_LOGIN', default='')
+PAYU_ACCOUNT_ID = env('PAYU_ACCOUNT_ID', default='')
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')

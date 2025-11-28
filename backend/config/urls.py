@@ -9,6 +9,7 @@ from apps.pagos.views import PagoViewSet
 from apps.tickets.views import TicketViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from apps.chatbot.views import chat
+from apps.pagos.views import crear_pago_wompi, crear_pago_payu
 
 router = routers.DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet)
@@ -24,4 +25,6 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/chat/', chat, name='chat'),
+    path('api/pagos/wompi/', crear_pago_wompi, name='pago_wompi'),
+    path('api/pagos/payu/', crear_pago_payu, name='pago_payu'),
 ]
