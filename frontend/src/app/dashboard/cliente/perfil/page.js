@@ -4,7 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { User, Mail, Phone, MapPin, Lock, Save, Loader2, Eye, EyeOff, CheckCircle, X } from 'lucide-react';
 import { fetchUsuario, actualizarUsuario, cambiarPasswordAutenticado } from '@/lib/api';
-
+// Función para obtener el token
+const getAuthToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+};
 export default function MiPerfil() {
   const [perfil, setPerfil] = useState({
     username: '',
