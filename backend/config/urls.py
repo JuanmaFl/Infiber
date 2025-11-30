@@ -8,8 +8,8 @@ from apps.usuarios.views import (
     cambiar_password_autenticado
 )
 from apps.planes.views import PlanViewSet
-from apps.contratos.views import ContratoViewSet
-from apps.facturas.views import FacturaViewSet
+from apps.contratos.views import ContratoViewSet, verificar_facturas_pendientes, cambiar_plan_contrato, cancelar_contrato
+from apps.facturas.views import FacturaViewSet, descargar_factura_pdf
 from apps.pagos.views import PagoViewSet
 from apps.tickets.views import TicketViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -37,4 +37,8 @@ urlpatterns = [
     path('api/pagos/wompi/', crear_transaccion_wompi, name='pago_wompi'),
     path('api/pagos/payu/', crear_transaccion_payu, name='pago_payu'),
     path('api/pagos/confirmar/', confirmar_pago, name='confirmar_pago'),
+    path('api/contratos/<int:contrato_id>/verificar-pendientes/', verificar_facturas_pendientes),
+    path('api/contratos/<int:contrato_id>/cambiar-plan/', cambiar_plan_contrato),
+    path('api/contratos/<int:contrato_id>/cancelar/', cancelar_contrato),
+    path('api/facturas/<int:factura_id>/descargar/', descargar_factura_pdf),
 ]
