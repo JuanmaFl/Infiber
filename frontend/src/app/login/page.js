@@ -19,15 +19,37 @@ export default function Login() {
     try {
       const data = await login(credentials.username, credentials.password);
       
-      // Guardar tokens
-      localStorage.setItem('token', data.access);
-      localStorage.setItem('refresh', data.refresh);
+      // Guardar tokens con nombres consistentes
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
       
-      // Redirigir al dashboard
-      router.push('/dashboard/cliente');
+      // Decodificar JWT para obtener user_id
+      const tokenPayload = JSON.parse(atob(data.access.split('.')[1]));
+      localStorage.setItem('user_id', tokenPayload.user_id);
+      
+      // Obtener información del usuario para determinar el rol
+      const userResponse = await fetch(`https://86.48.21.76/infiber/api/usuarios/${tokenPayload.user_id}/`, {
+        headers: {
+          'Authorization': `Bearer ${data.access}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const userData = await userResponse.json();
+      
+      console.log('🚀 Redirigiendo según rol:', userData.rol);
+      
+      // Redirigir según el rol
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (userData.rol === 'admin' || userData.rol === 'superadmin') {
+        window.location.replace('/dashboard/admin');
+      } else {
+        window.location.replace('/dashboard/cliente');
+      }
+      
     } catch (err) {
       setError('Usuario o contraseña incorrectos');
-    } finally {
       setLoading(false);
     }
   };
@@ -53,12 +75,13 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-[#212121] font-semibold mb-2">
-              Usuario
+              Usuario o Email
             </label>
             <input
               type="text"
               value={credentials.username}
               onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+              placeholder="usuario o email@ejemplo.com"
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#00BCD4] focus:outline-none transition text-[#212121]"
               required
               disabled={loading}
@@ -77,6 +100,15 @@ export default function Login() {
               required
               disabled={loading}
             />
+          </div>
+
+          <div className="text-right">
+            <Link 
+              href="/recuperar-password" 
+              className="text-sm text-[#00BCD4] hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
 
           <motion.button

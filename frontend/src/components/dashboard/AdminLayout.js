@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  LayoutDashboard, Users, FileText, CreditCard, Ticket, 
-  Settings, LogOut, Menu, X, BarChart 
+  Home, Users, FileText, CreditCard, Ticket, 
+  LogOut, Menu, X, Settings 
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -14,26 +14,25 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       router.push('/login');
     }
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_id');
     router.push('/login');
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Panel Admin', href: '/dashboard/admin' },
-    { icon: Users, label: 'Gestión Clientes', href: '/dashboard/admin/clientes' },
-    { icon: FileText, label: 'Gestión Contratos', href: '/dashboard/admin/contratos' },
-    { icon: CreditCard, label: 'Gestión Facturas', href: '/dashboard/admin/facturas' },
-    { icon: Ticket, label: 'Gestión Tickets', href: '/dashboard/admin/tickets' },
-    { icon: BarChart, label: 'Reportes', href: '/dashboard/admin/reportes' },
-    { icon: Settings, label: 'Configuración', href: '/dashboard/admin/configuracion' },
+    { icon: Home, label: 'Panel Principal', href: '/dashboard/admin' },
+    { icon: Users, label: 'Clientes', href: '/dashboard/admin/clientes' },
+    { icon: FileText, label: 'Contratos', href: '/dashboard/admin/contratos' },
+    { icon: CreditCard, label: 'Facturas', href: '/dashboard/admin/facturas' },
+    { icon: Ticket, label: 'Tickets', href: '/dashboard/admin/tickets' },
   ];
 
   return (
@@ -44,14 +43,14 @@ export default function AdminLayout({ children }) {
         animate={{ width: sidebarOpen ? 280 : 80 }}
         className="fixed left-0 top-0 h-full bg-[#212121] text-white z-50"
       >
-        <div className="p-6 flex items-center justify-between border-b border-gray-700">
+        <div className="p-6 flex items-center justify-between">
           {sidebarOpen && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
               <h1 className="text-2xl font-bold text-[#00BCD4]">Infiber</h1>
-              <p className="text-xs text-gray-400">Panel Admin</p>
+              <p className="text-xs text-white/60">Admin</p>
             </motion.div>
           )}
           <button
@@ -119,7 +118,7 @@ export default function AdminLayout({ children }) {
               Panel de Administración
             </h2>
             <div className="flex items-center gap-4">
-              <span className="text-[#757575]">Admin</span>
+              <span className="text-[#757575]">Administrador</span>
             </div>
           </div>
         </header>

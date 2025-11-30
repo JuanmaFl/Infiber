@@ -15,7 +15,7 @@ export default function MisFacturas() {
 
   const cargarFacturas = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');  // ✅ CAMBIO AQUÍ
       if (!token) return;
       
       const data = await fetchFacturas(token);

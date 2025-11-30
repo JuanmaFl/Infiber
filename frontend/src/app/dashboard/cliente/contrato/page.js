@@ -2,20 +2,61 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { FileText, Calendar, MapPin, Wifi } from 'lucide-react';
+import { FileText, Calendar, MapPin, Wifi, Loader2 } from 'lucide-react';
+import { fetchContratos } from '@/lib/api';
 
 export default function MiContrato() {
-  const [contrato, setContrato] = useState({
-    id: 'CNT-001',
-    plan: 'Plan Estándar 50 Megas',
-    velocidad_bajada: 50,
-    velocidad_subida: 10,
-    precio: 70000,
-    estado: 'activo',
-    fecha_inicio: '2025-01-01',
-    direccion: 'Cra 45 #23-12, Palmitas',
-    zona: 'Palmitas'
-  });
+  const [contrato, setContrato] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const cargarContrato = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          setError('No estás autenticado');
+          return;
+        }
+
+        const data = await fetchContratos(token);
+        
+        if (!data) {
+          setError('No tienes un contrato activo');
+          return;
+        }
+
+        setContrato(data);
+      } catch (err) {
+        console.error('Error:', err);
+        setError('Error al cargar el contrato');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarContrato();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="animate-spin text-[#00BCD4]" size={48} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !contrato) {
+    return (
+      <DashboardLayout>
+        <div className="bg-white p-8 rounded-2xl shadow-sm border-2 border-gray-100 text-center">
+          <p className="text-[#F44336] text-lg">{error || 'No se encontró el contrato'}</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -52,7 +93,7 @@ export default function MiContrato() {
                 </div>
                 <div>
                   <p className="text-[#757575] text-sm">Número de Contrato</p>
-                  <p className="text-lg font-bold text-[#212121]">{contrato.id}</p>
+                  <p className="text-lg font-bold text-[#212121]">CNT-{contrato.id}</p>
                 </div>
               </div>
 
@@ -62,10 +103,14 @@ export default function MiContrato() {
                 </div>
                 <div>
                   <p className="text-[#757575] text-sm">Plan Contratado</p>
-                  <p className="text-lg font-bold text-[#212121]">{contrato.plan}</p>
-                  <p className="text-sm text-[#757575]">
-                    ⬇ {contrato.velocidad_bajada} Mbps / ⬆ {contrato.velocidad_subida} Mbps
+                  <p className="text-lg font-bold text-[#212121]">
+                    {contrato.plan_detalle?.nombre || 'Plan No Disponible'}
                   </p>
+                  {contrato.plan_detalle && (
+                    <p className="text-sm text-[#757575]">
+                      ⬇ {contrato.plan_detalle.velocidad_bajada} Mbps / ⬆ {contrato.plan_detalle.velocidad_subida} Mbps
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -107,7 +152,7 @@ export default function MiContrato() {
               <div className="p-6 bg-[#E3F2FD] rounded-xl">
                 <p className="text-[#757575] text-sm mb-2">Valor Mensual</p>
                 <p className="text-4xl font-bold text-[#00BCD4]">
-                  ${contrato.precio.toLocaleString()}
+                  ${contrato.plan_detalle?.precio?.toLocaleString() || '0'}
                 </p>
                 <p className="text-sm text-[#757575] mt-1">+ IVA incluido</p>
               </div>

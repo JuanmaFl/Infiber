@@ -22,7 +22,7 @@ export default function MisTickets() {
 
   const cargarTickets = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');  // ✅ CAMBIO AQUÍ
       if (!token) return;
       
       const data = await fetchTickets(token);
@@ -39,7 +39,7 @@ export default function MisTickets() {
     setEnviando(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');  // ✅ CAMBIO AQUÍ
       await crearTicket(token, {
         asunto: nuevoTicket.asunto,
         descripcion: nuevoTicket.descripcion,
@@ -227,8 +227,8 @@ export default function MisTickets() {
                 </div>
 
                 <div className="flex gap-4 text-sm text-[#757575] pt-3 border-t border-gray-100">
-                  <span>Creado: {new Date(ticket.created_at).toLocaleDateString('es-CO')}</span>
-                  <span>Actualizado: {new Date(ticket.updated_at).toLocaleDateString('es-CO')}</span>
+                  <span>Creado: {new Date(ticket.creado).toLocaleDateString('es-CO')}</span>
+                  <span>Actualizado: {new Date(ticket.actualizado).toLocaleDateString('es-CO')}</span>
                 </div>
               </motion.div>
             ))}
