@@ -202,12 +202,22 @@ export const actualizarUsuario = async (token, userId, userData) => {
 
 // ============ CHATBOT ============
 export const chat = async (mensaje) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
   const response = await fetch(`${API_URL}/chat/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,  // ✅ AGREGAR ESTA LÍNEA
+    },
     body: JSON.stringify({ mensaje }),
   });
-  if (!response.ok) throw new Error('Error en el chat');
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error en el chat');
+  }
+
   return response.json();
 };
 // ============================================
@@ -249,7 +259,11 @@ export const verificarCodigoYResetear = async (email, codigo, nueva_password) =>
 };
 
 export const cambiarPasswordAutenticado = async (password_actual, nueva_password) => {
-  const token = getAuthToken();
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  if (!token) {
+    throw new Error('No estás autenticado');
+  }
   
   const response = await fetch(`${API_URL}/password/cambiar/`, {
     method: 'POST',
