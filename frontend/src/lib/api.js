@@ -2,13 +2,68 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://infiber.duckdns.org/
 
 // ============ AUTENTICACIÓN ============
 export const login = async (username, password) => {
+  console.log('🔐 Intentando login...');
+  
   const response = await fetch(`${API_URL}/token/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
-  if (!response.ok) throw new Error('Credenciales inválidas');
-  return response.json();
+  
+  console.log('📥 Respuesta token:', response.status);
+  
+  if (!response.ok) {
+    throw new Error('Credenciales inválidas');
+  }
+  
+  const data = await response.json();
+  console.log('✅ Tokens obtenidos');
+  
+  // Guardar tokens
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+  }
+  
+  // Verificar si el usuario está bloqueado haciendo una petición de prueba
+  console.log('🔍 Verificando bloqueo...');
+  try {
+    const testResponse = await fetch(`${API_URL}/usuarios/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${data.access}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('📥 Respuesta verificación:', testResponse.status);
+    
+    if (testResponse.status === 403) {
+      const bloqueadoData = await testResponse.json();
+      console.log('⚠️ Respuesta 403:', bloqueadoData);
+      
+      if (bloqueadoData.bloqueado) {
+        console.log('🚫 Usuario bloqueado detectado!');
+        // Usuario bloqueado, guardar info y lanzar error especial
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('usuario_bloqueado', JSON.stringify(bloqueadoData));
+          // Limpiar tokens
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+        }
+        throw new Error('USUARIO_BLOQUEADO');
+      }
+    }
+  } catch (error) {
+    console.log('❌ Error en verificación:', error.message);
+    if (error.message === 'USUARIO_BLOQUEADO') {
+      throw error;
+    }
+    // Si falla la verificación, continuar normalmente
+  }
+  
+  console.log('✅ Login completado sin bloqueo');
+  return data;
 };
 
 // Refresh token automático
@@ -35,6 +90,7 @@ export const refreshToken = async () => {
 };
 
 // Helper para hacer peticiones con auto-refresh
+
 export const fetchWithAuth = async (url, options = {}) => {
   const token = localStorage.getItem('access_token');
   
@@ -46,6 +102,26 @@ export const fetchWithAuth = async (url, options = {}) => {
       'Content-Type': 'application/json',
     },
   });
+
+  // Verificar si es usuario bloqueado
+  if (response.status === 403) {
+    try {
+      const data = await response.json();
+      if (data.bloqueado) {
+        // Guardar info del bloqueo para mostrar
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('usuario_bloqueado', JSON.stringify(data));
+          window.location.href = '/bloqueado';
+        }
+        throw new Error('Usuario bloqueado');
+      }
+    } catch (error) {
+      // Si no es JSON o no tiene campo bloqueado, continuar con el flujo normal
+      if (error.message !== 'Usuario bloqueado') {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    }
+  }
 
   // Si el token expiró (401), intentar refrescar
   if (response.status === 401) {
@@ -145,13 +221,50 @@ export const fetchContratos = async (token) => {
 };
 
 // ============ PAGOS ============
-export const fetchPagos = async (token) => {
+// ==========================================
+// PAGOS
+// ==========================================
+
+export const fetchPagos = async () => {
   const response = await fetchWithAuth(`${API_URL}/pagos/`);
   if (!response.ok) throw new Error('Error al cargar pagos');
   return response.json();
 };
 
+// ==========================================
+// WOMPI - NUEVA INTEGRACIÓN
+// ==========================================
+
+export const crearLinkPagoWompi = async (facturaId) => {
+  const response = await fetchWithAuth(`${API_URL}/pagos/wompi/crear-link/`, {
+    method: 'POST',
+    body: JSON.stringify({ factura_id: facturaId })
+  });
+  if (!response.ok) throw new Error('Error al crear link de pago');
+  return response.json();
+};
+
+export const consultarEstadoPago = async (transactionId) => {
+  const response = await fetchWithAuth(`${API_URL}/pagos/wompi/consultar/${transactionId}/`);
+  if (!response.ok) throw new Error('Error al consultar estado del pago');
+  return response.json();
+};
+
+export const confirmarPagoManual = async (data) => {
+  const response = await fetchWithAuth(`${API_URL}/pagos/confirmar-manual/`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) throw new Error('Error al confirmar pago manual');
+  return response.json();
+};
+
+// ==========================================
+// FUNCIONES ANTIGUAS (mantener por compatibilidad)
+// ==========================================
+
 export const crearTransaccionWompi = async (token, facturaId) => {
+  console.warn('⚠️ crearTransaccionWompi está deprecado, usa crearLinkPagoWompi');
   const response = await fetchWithAuth(`${API_URL}/pagos/wompi/`, {
     method: 'POST',
     body: JSON.stringify({ factura_id: facturaId })
@@ -170,6 +283,7 @@ export const crearTransaccionPayU = async (token, facturaId) => {
 };
 
 export const confirmarPago = async (token, pagoData) => {
+  console.warn('⚠️ confirmarPago está deprecado, usa confirmarPagoManual');
   const response = await fetchWithAuth(`${API_URL}/pagos/confirmar/`, {
     method: 'POST',
     body: JSON.stringify(pagoData)
@@ -208,7 +322,7 @@ export const chat = async (mensaje) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,  // ✅ AGREGAR ESTA LÍNEA
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ mensaje }),
   });
@@ -220,6 +334,7 @@ export const chat = async (mensaje) => {
 
   return response.json();
 };
+
 // ============================================
 // RECUPERACIÓN DE CONTRASEÑA
 // ============================================
@@ -279,5 +394,226 @@ export const cambiarPasswordAutenticado = async (password_actual, nueva_password
     throw new Error(error.error || 'Error al cambiar contraseña');
   }
 
+  return response.json();
+};
+
+// ============================================
+// GESTIÓN DE CONTRATOS
+// ============================================
+
+export const verificarFacturasPendientes = async (contratoId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/contratos/${contratoId}/verificar-pendientes/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al verificar facturas');
+  }
+
+  return response.json();
+};
+
+export const cambiarPlanContrato = async (contratoId, nuevoPlanId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/contratos/${contratoId}/cambiar-plan/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ nuevo_plan_id: nuevoPlanId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cambiar plan');
+  }
+
+  return response.json();
+};
+
+export const cancelarContrato = async (contratoId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/contratos/${contratoId}/cancelar/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cancelar contrato');
+  }
+
+  return response.json();
+};
+
+// ============================================
+// DESCARGAR FACTURA PDF
+// ============================================
+
+export const descargarFacturaPDF = async (facturaId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/facturas/${facturaId}/descargar/`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al descargar factura');
+  }
+
+  // Convertir respuesta a blob para descargar
+  const blob = await response.blob();
+  return blob;
+};
+
+// ============================================
+// COMENTARIOS DE TICKETS
+// ============================================
+
+export const listarComentarios = async (ticketId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/tickets/${ticketId}/comentarios/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al cargar comentarios');
+  }
+
+  return response.json();
+};
+
+export const agregarComentario = async (ticketId, comentario) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/tickets/${ticketId}/comentarios/crear/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ comentario }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al agregar comentario');
+  }
+
+  return response.json();
+};
+
+// ============================================
+// GESTIÓN DE TICKETS (ADMIN)
+// ============================================
+
+export const asignarTecnico = async (ticketId, tecnicoId) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/tickets/${ticketId}/asignar-tecnico/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ tecnico_id: tecnicoId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al asignar técnico');
+  }
+
+  return response.json();
+};
+
+export const cambiarEstadoTicket = async (ticketId, estado) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/tickets/${ticketId}/cambiar-estado/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ estado }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cambiar estado');
+  }
+
+  return response.json();
+};
+
+export const cambiarPrioridadTicket = async (ticketId, prioridad) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/tickets/${ticketId}/cambiar-prioridad/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ prioridad }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al cambiar prioridad');
+  }
+
+  return response.json();
+};
+
+export const fetchTecnicos = async () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  
+  const response = await fetch(`${API_URL}/usuarios/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al cargar técnicos');
+  }
+
+  const usuarios = await response.json();
+  // Filtrar solo técnicos, admins y superadmins
+  return usuarios.filter(u => ['tecnico', 'admin', 'superadmin'].includes(u.rol));
+};
+
+// ============================================
+// ESTADÍSTICAS DASHBOARD
+// ============================================
+
+export const fetchEstadisticas = async () => {
+  const response = await fetchWithAuth(`${API_URL}/estadisticas/`);
+  if (!response.ok) throw new Error('Error al cargar estadísticas');
   return response.json();
 };

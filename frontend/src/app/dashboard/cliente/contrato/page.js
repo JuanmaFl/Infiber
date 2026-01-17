@@ -1,42 +1,177 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { FileText, Calendar, MapPin, Wifi, Loader2 } from 'lucide-react';
-import { fetchContratos } from '@/lib/api';
+import { FileText, Calendar, MapPin, Wifi, Loader2, X, AlertTriangle, CheckCircle, Download } from 'lucide-react';
+import { 
+  fetchContratos, 
+  verificarFacturasPendientes, 
+  fetchPlanes, 
+  cambiarPlanContrato, 
+  cancelarContrato 
+} from '@/lib/api';
 
 export default function MiContrato() {
   const [contrato, setContrato] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estados para modales
+  const [mostrarModalCambiarPlan, setMostrarModalCambiarPlan] = useState(false);
+  const [mostrarModalCancelar, setMostrarModalCancelar] = useState(false);
+  
+  // Estados para cambiar plan
+  const [planes, setPlanes] = useState([]);
+  const [planSeleccionado, setPlanSeleccionado] = useState(null);
+  const [cambiandoPlan, setCambiandoPlan] = useState(false);
+  
+  // Estados para cancelar
+  const [cancelando, setCancelando] = useState(false);
+  
+  // Estados para mensajes
+  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
   useEffect(() => {
-    const cargarContrato = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          setError('No estás autenticado');
-          return;
-        }
-
-        const data = await fetchContratos(token);
-        
-        if (!data) {
-          setError('No tienes un contrato activo');
-          return;
-        }
-
-        setContrato(data);
-      } catch (err) {
-        console.error('Error:', err);
-        setError('Error al cargar el contrato');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     cargarContrato();
   }, []);
+
+  const cargarContrato = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('No estás autenticado');
+        return;
+      }
+
+      const data = await fetchContratos(token);
+      
+      if (!data) {
+        setError('No tienes un contrato activo');
+        return;
+      }
+
+      setContrato(data);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Error al cargar el contrato');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCambiarPlan = async () => {
+    try {
+      // Verificar facturas pendientes
+      const { tiene_pendientes, cantidad } = await verificarFacturasPendientes(contrato.id);
+      
+      if (tiene_pendientes) {
+        setMensaje({
+          tipo: 'error',
+          texto: `Tienes ${cantidad} factura(s) pendiente(s). Debes pagarlas antes de cambiar de plan.`
+        });
+        setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
+        return;
+      }
+      
+      // Cargar planes disponibles
+      const planesData = await fetchPlanes();
+      setPlanes(planesData.filter(plan => plan.id !== contrato.plan_detalle?.id));
+      setMostrarModalCambiarPlan(true);
+      
+    } catch (err) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.message || 'Error al verificar facturas'
+      });
+      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
+    }
+  };
+
+  const confirmarCambioPlan = async () => {
+    if (!planSeleccionado) {
+      setMensaje({ tipo: 'error', texto: 'Selecciona un plan' });
+      return;
+    }
+
+    setCambiandoPlan(true);
+    try {
+      await cambiarPlanContrato(contrato.id, planSeleccionado);
+      
+      setMensaje({
+        tipo: 'exito',
+        texto: '¡Plan actualizado exitosamente!'
+      });
+      
+      setMostrarModalCambiarPlan(false);
+      await cargarContrato(); // Recargar contrato
+      
+      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
+    } catch (err) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.message || 'Error al cambiar plan'
+      });
+    } finally {
+      setCambiandoPlan(false);
+    }
+  };
+
+  const handleCancelarServicio = async () => {
+    try {
+      // Verificar facturas pendientes
+      const { tiene_pendientes, cantidad } = await verificarFacturasPendientes(contrato.id);
+      
+      if (tiene_pendientes) {
+        setMensaje({
+          tipo: 'error',
+          texto: `Tienes ${cantidad} factura(s) pendiente(s). Debes pagarlas antes de cancelar el servicio.`
+        });
+        setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
+        return;
+      }
+      
+      setMostrarModalCancelar(true);
+      
+    } catch (err) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.message || 'Error al verificar facturas'
+      });
+      setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
+    }
+  };
+
+  const confirmarCancelacion = async () => {
+    setCancelando(true);
+    try {
+      await cancelarContrato(contrato.id);
+      
+      setMensaje({
+        tipo: 'exito',
+        texto: 'Servicio cancelado exitosamente. Lamentamos verte partir.'
+      });
+      
+      setMostrarModalCancelar(false);
+      await cargarContrato(); // Recargar contrato
+      
+    } catch (err) {
+      setMensaje({
+        tipo: 'error',
+        texto: err.message || 'Error al cancelar servicio'
+      });
+    } finally {
+      setCancelando(false);
+    }
+  };
+
+  const handleDescargarContrato = () => {
+    // Por ahora solo muestra un mensaje, puedes implementar generación de PDF después
+    setMensaje({
+      tipo: 'info',
+      texto: 'Funcionalidad de descarga de contrato en desarrollo'
+    });
+    setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000);
+  };
 
   if (loading) {
     return (
@@ -61,6 +196,24 @@ export default function MiContrato() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Mensajes de estado */}
+        <AnimatePresence>
+          {mensaje.texto && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={`p-4 rounded-xl ${
+                mensaje.tipo === 'error' ? 'bg-[#FFEBEE] text-[#F44336]' :
+                mensaje.tipo === 'exito' ? 'bg-[#E8F5E9] text-[#4CAF50]' :
+                'bg-[#E3F2FD] text-[#00BCD4]'
+              }`}
+            >
+              {mensaje.texto}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -186,18 +339,172 @@ export default function MiContrato() {
             Acciones
           </h3>
           <div className="grid md:grid-cols-3 gap-4">
-            <button className="p-4 bg-[#00BCD4] text-white rounded-xl hover:bg-[#00ACC1] transition font-semibold">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleCambiarPlan}
+              disabled={contrato.estado !== 'activo'}
+              className="p-4 bg-[#00BCD4] text-white rounded-xl hover:bg-[#00ACC1] transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Cambiar de Plan
-            </button>
-            <button className="p-4 border-2 border-[#00BCD4] text-[#00BCD4] rounded-xl hover:bg-[#E3F2FD] transition font-semibold">
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleDescargarContrato}
+              className="p-4 border-2 border-[#00BCD4] text-[#00BCD4] rounded-xl hover:bg-[#E3F2FD] transition font-semibold flex items-center justify-center gap-2"
+            >
+              <Download size={20} />
               Descargar Contrato
-            </button>
-            <button className="p-4 border-2 border-gray-300 text-[#757575] rounded-xl hover:border-[#F44336] hover:text-[#F44336] transition font-semibold">
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleCancelarServicio}
+              disabled={contrato.estado !== 'activo'}
+              className="p-4 border-2 border-gray-300 text-[#757575] rounded-xl hover:border-[#F44336] hover:text-[#F44336] transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Cancelar Servicio
-            </button>
+            </motion.button>
           </div>
         </motion.div>
       </div>
+
+      {/* Modal Cambiar Plan */}
+      <AnimatePresence>
+        {mostrarModalCambiarPlan && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-[#212121]">Cambiar de Plan</h2>
+                <button
+                  onClick={() => setMostrarModalCambiarPlan(false)}
+                  className="text-[#757575] hover:text-[#212121]"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <p className="text-[#757575] mb-6">
+                Selecciona el nuevo plan que deseas contratar. El cambio será efectivo inmediatamente.
+              </p>
+
+              <div className="space-y-4">
+                {planes.map((plan) => (
+                  <motion.div
+                    key={plan.id}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setPlanSeleccionado(plan.id)}
+                    className={`p-4 border-2 rounded-xl cursor-pointer transition ${
+                      planSeleccionado === plan.id
+                        ? 'border-[#00BCD4] bg-[#E3F2FD]'
+                        : 'border-gray-200 hover:border-[#00BCD4]'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-lg text-[#212121]">{plan.nombre}</h3>
+                        <p className="text-[#757575] text-sm mt-1">
+                          ⬇ {plan.velocidad_bajada} Mbps / ⬆ {plan.velocidad_subida} Mbps
+                        </p>
+                      </div>
+                      <p className="text-2xl font-bold text-[#00BCD4]">
+                        ${plan.precio?.toLocaleString()}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => setMostrarModalCambiarPlan(false)}
+                  className="flex-1 p-4 border-2 border-gray-300 text-[#757575] rounded-xl hover:border-[#00BCD4] hover:text-[#00BCD4] transition font-semibold"
+                >
+                  Cancelar
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={confirmarCambioPlan}
+                  disabled={!planSeleccionado || cambiandoPlan}
+                  className="flex-1 p-4 bg-[#00BCD4] text-white rounded-xl hover:bg-[#00ACC1] transition font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {cambiandoPlan ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Cambiando...
+                    </>
+                  ) : (
+                    'Confirmar Cambio'
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Cancelar Servicio */}
+      <AnimatePresence>
+        {mostrarModalCancelar && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl p-8 max-w-md w-full"
+            >
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="w-16 h-16 bg-[#FFEBEE] rounded-full flex items-center justify-center mb-4">
+                  <AlertTriangle className="text-[#F44336]" size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-[#212121]">¿Cancelar Servicio?</h2>
+              </div>
+
+              <div className="bg-[#FFF3E0] p-4 rounded-xl mb-6">
+                <p className="text-[#E65100] text-sm">
+                  <strong>Advertencia:</strong> Esta acción cancelará tu servicio de internet permanentemente. Perderás acceso a tu plan actual y a todos los beneficios asociados.
+                </p>
+              </div>
+
+              <p className="text-[#757575] mb-6">
+                Lamentamos verte partir. Si tienes algún problema con el servicio, contáctanos para buscar una solución antes de cancelar.
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setMostrarModalCancelar(false)}
+                  className="flex-1 p-4 border-2 border-gray-300 text-[#757575] rounded-xl hover:border-[#00BCD4] hover:text-[#00BCD4] transition font-semibold"
+                >
+                  No, mantener servicio
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={confirmarCancelacion}
+                  disabled={cancelando}
+                  className="flex-1 p-4 bg-[#F44336] text-white rounded-xl hover:bg-[#E53935] transition font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {cancelando ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Cancelando...
+                    </>
+                  ) : (
+                    'Sí, cancelar'
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

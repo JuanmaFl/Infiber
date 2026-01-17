@@ -1,35 +1,60 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '@/components/dashboard/AdminLayout';
-import { Search, Eye, Loader2, MessageSquare, User, Clock } from 'lucide-react';
+import { 
+  Search, Eye, Loader2, MessageSquare, User, Clock, X, Send,
+  UserCheck, AlertCircle, CheckCircle, XCircle
+} from 'lucide-react';
+import { 
+  listarComentarios, 
+  agregarComentario,
+  asignarTecnico,
+  cambiarEstadoTicket,
+  cambiarPrioridadTicket,
+  fetchTecnicos
+} from '@/lib/api';
 
 export default function GestionTickets() {
   const [tickets, setTickets] = useState([]);
+  const [tecnicos, setTecnicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroPrioridad, setFiltroPrioridad] = useState('todas');
+  
+  // Modal de detalles
   const [ticketSeleccionado, setTicketSeleccionado] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [comentarios, setComentarios] = useState([]);
+  const [nuevoComentario, setNuevoComentario] = useState('');
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+  
+  // Estados de carga
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [cambiandoPrioridad, setCambiandoPrioridad] = useState(false);
+  const [asignandoTecnico, setAsignandoTecnico] = useState(false);
 
   useEffect(() => {
-    cargarTickets();
+    cargarDatos();
   }, []);
 
-  const cargarTickets = async () => {
+  const cargarDatos = async () => {
     try {
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('https://86.48.21.76/infiber/api/tickets/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const [ticketsData, tecnicosData] = await Promise.all([
+        fetch('https://86.48.21.76/infiber/api/tickets/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(r => r.json()),
+        fetchTecnicos()
+      ]);
       
-      const data = await response.json();
-      setTickets(data);
+      setTickets(ticketsData);
+      setTecnicos(tecnicosData);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -51,9 +76,101 @@ export default function GestionTickets() {
     return cumpleBusqueda && cumpleEstado && cumplePrioridad;
   });
 
-  const verDetalles = (ticket) => {
+  const abrirModal = async (ticket) => {
     setTicketSeleccionado(ticket);
     setMostrarModal(true);
+    
+    try {
+      const data = await listarComentarios(ticket.id);
+      setComentarios(data);
+    } catch (error) {
+      console.error('Error cargando comentarios:', error);
+    }
+  };
+
+  const handleEnviarComentario = async (e) => {
+    e.preventDefault();
+    if (!nuevoComentario.trim()) return;
+
+    setEnviandoComentario(true);
+    try {
+      const comentarioCreado = await agregarComentario(ticketSeleccionado.id, nuevoComentario);
+      setComentarios([...comentarios, comentarioCreado]);
+      setNuevoComentario('');
+    } catch (error) {
+      console.error('Error agregando comentario:', error);
+      alert('Error al agregar comentario');
+    } finally {
+      setEnviandoComentario(false);
+    }
+  };
+
+  const handleAsignarTecnico = async (tecnicoId) => {
+    setAsignandoTecnico(true);
+    try {
+      const ticketActualizado = await asignarTecnico(ticketSeleccionado.id, tecnicoId);
+      setTicketSeleccionado(ticketActualizado);
+      
+      // Actualizar en la lista
+      setTickets(tickets.map(t => t.id === ticketActualizado.id ? ticketActualizado : t));
+      
+      // Recargar comentarios
+      const comentariosActualizados = await listarComentarios(ticketSeleccionado.id);
+      setComentarios(comentariosActualizados);
+      
+      alert('Técnico asignado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.message || 'Error al asignar técnico');
+    } finally {
+      setAsignandoTecnico(false);
+    }
+  };
+
+  const handleCambiarEstado = async (nuevoEstado) => {
+    if (!confirm(`¿Cambiar el estado del ticket a "${nuevoEstado.replace('_', ' ')}"?`)) return;
+    
+    setCambiandoEstado(true);
+    try {
+      const ticketActualizado = await cambiarEstadoTicket(ticketSeleccionado.id, nuevoEstado);
+      setTicketSeleccionado(ticketActualizado);
+      
+      // Actualizar en la lista
+      setTickets(tickets.map(t => t.id === ticketActualizado.id ? ticketActualizado : t));
+      
+      // Recargar comentarios
+      const comentariosActualizados = await listarComentarios(ticketSeleccionado.id);
+      setComentarios(comentariosActualizados);
+      
+      alert('Estado actualizado y notificación enviada al cliente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.message || 'Error al cambiar estado');
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
+
+  const handleCambiarPrioridad = async (nuevaPrioridad) => {
+    setCambiandoPrioridad(true);
+    try {
+      const ticketActualizado = await cambiarPrioridadTicket(ticketSeleccionado.id, nuevaPrioridad);
+      setTicketSeleccionado(ticketActualizado);
+      
+      // Actualizar en la lista
+      setTickets(tickets.map(t => t.id === ticketActualizado.id ? ticketActualizado : t));
+      
+      // Recargar comentarios
+      const comentariosActualizados = await listarComentarios(ticketSeleccionado.id);
+      setComentarios(comentariosActualizados);
+      
+      alert('Prioridad actualizada');
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.message || 'Error al cambiar prioridad');
+    } finally {
+      setCambiandoPrioridad(false);
+    }
   };
 
   const getEstadoColor = (estado) => {
@@ -69,10 +186,22 @@ export default function GestionTickets() {
   const getPrioridadColor = (prioridad) => {
     switch(prioridad) {
       case 'alta': return 'bg-[#FFEBEE] text-[#F44336]';
+      case 'urgente': return 'bg-[#FFEBEE] text-[#D32F2F]';
       case 'media': return 'bg-[#FFF3E0] text-[#FF9800]';
       case 'baja': return 'bg-[#E3F2FD] text-[#00BCD4]';
       default: return 'bg-gray-100 text-gray-600';
     }
+  };
+
+  const getTipoNombre = (tipo) => {
+    const nombres = {
+      'problema_conexion': 'Problema de Conexión',
+      'traslado': 'Traslado de Servicio',
+      'router_adicional': 'Router Adicional',
+      'cambio_plan': 'Cambio de Plan',
+      'otro': 'Otro'
+    };
+    return nombres[tipo] || tipo;
   };
 
   const calcularEstadisticas = () => {
@@ -186,6 +315,7 @@ export default function GestionTickets() {
               className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#00BCD4] focus:outline-none transition text-[#212121]"
             >
               <option value="todas">Todas las prioridades</option>
+              <option value="urgente">Urgente</option>
               <option value="alta">Alta</option>
               <option value="media">Media</option>
               <option value="baja">Baja</option>
@@ -197,6 +327,7 @@ export default function GestionTickets() {
         <div className="space-y-4">
           {ticketsFiltrados.length === 0 ? (
             <div className="bg-white p-12 rounded-2xl shadow-sm border-2 border-gray-100 text-center">
+              <AlertCircle className="mx-auto text-[#757575] mb-4" size={48} />
               <p className="text-[#757575]">No se encontraron tickets</p>
             </div>
           ) : (
@@ -210,10 +341,13 @@ export default function GestionTickets() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="text-xl font-bold text-[#212121]">
                         #{ticket.id} - {ticket.asunto}
                       </h3>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#F5F5F5] text-[#757575]">
+                        {getTipoNombre(ticket.tipo)}
+                      </span>
                       <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getPrioridadColor(ticket.prioridad)}`}>
                         {ticket.prioridad.charAt(0).toUpperCase() + ticket.prioridad.slice(1)}
                       </span>
@@ -224,7 +358,7 @@ export default function GestionTickets() {
                     
                     <p className="text-[#757575] mb-3">{ticket.descripcion}</p>
                     
-                    <div className="flex gap-4 text-sm text-[#757575]">
+                    <div className="flex gap-4 text-sm text-[#757575] flex-wrap">
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
                         <span>Creado: {new Date(ticket.creado).toLocaleDateString('es-CO')}</span>
@@ -233,135 +367,216 @@ export default function GestionTickets() {
                         <User size={16} />
                         <span>Cliente ID: {ticket.cliente}</span>
                       </div>
+                      {ticket.asignado_a && (
+                        <div className="flex items-center gap-1">
+                          <UserCheck size={16} className="text-[#00BCD4]" />
+                          <span className="text-[#00BCD4]">Asignado: Técnico #{ticket.asignado_a}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => verDetalles(ticket)}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => abrirModal(ticket)}
                     className="ml-4 p-3 bg-[#E3F2FD] text-[#00BCD4] rounded-xl hover:bg-[#00BCD4] hover:text-white transition"
+                    title="Gestionar ticket"
                   >
                     <Eye size={20} />
-                  </button>
+                  </motion.button>
                 </div>
               </motion.div>
             ))
           )}
         </div>
+      </div>
 
-        {/* Modal de Detalles */}
+      {/* Modal de Gestión Completo */}
+      <AnimatePresence>
         {mostrarModal && ticketSeleccionado && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl w-full max-w-4xl my-8"
             >
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-[#212121]">Detalles del Ticket</h2>
-                  <button
-                    onClick={() => setMostrarModal(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition"
-                  >
-                    ✕
-                  </button>
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#212121]">
+                    Ticket #{ticketSeleccionado.id}
+                  </h2>
+                  <p className="text-[#757575] text-sm">{ticketSeleccionado.asunto}</p>
                 </div>
+                <button
+                  onClick={() => setMostrarModal(false)}
+                  className="text-[#757575] hover:text-[#212121] p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                {/* ID y Estado */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[#757575] text-sm">Ticket ID</p>
-                    <p className="text-3xl font-bold text-[#00BCD4]">#{ticketSeleccionado.id}</p>
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Información Principal */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
+                    <p className="font-semibold text-[#212121] mb-2">Tipo de Solicitud</p>
+                    <p className="text-[#757575]">{getTipoNombre(ticketSeleccionado.tipo)}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getPrioridadColor(ticketSeleccionado.prioridad)}`}>
-                      {ticketSeleccionado.prioridad.charAt(0).toUpperCase() + ticketSeleccionado.prioridad.slice(1)}
-                    </span>
-                    <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getEstadoColor(ticketSeleccionado.estado)}`}>
-                      {ticketSeleccionado.estado.replace('_', ' ').charAt(0).toUpperCase() + ticketSeleccionado.estado.replace('_', ' ').slice(1)}
-                    </span>
+                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
+                    <p className="font-semibold text-[#212121] mb-2">Cliente</p>
+                    <p className="text-[#757575]">ID: {ticketSeleccionado.cliente}</p>
                   </div>
-                </div>
-
-                {/* Asunto */}
-                <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                  <p className="font-semibold text-[#212121] text-lg mb-2">Asunto</p>
-                  <p className="text-[#757575]">{ticketSeleccionado.asunto}</p>
                 </div>
 
                 {/* Descripción */}
-                <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                  <p className="font-semibold text-[#212121] text-lg mb-2">Descripción</p>
-                  <p className="text-[#757575] whitespace-pre-wrap">{ticketSeleccionado.descripcion}</p>
+                <div className="p-4 bg-[#F5F5F5] rounded-xl">
+                  <p className="font-semibold text-[#212121] mb-2">Descripción</p>
+                  <p className="text-[#424242] whitespace-pre-wrap">{ticketSeleccionado.descripcion}</p>
                 </div>
 
-                {/* Información del Ticket */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                    <div className="flex items-center gap-2 mb-1">
-                      <User className="text-[#00BCD4]" size={16} />
-                      <p className="font-semibold text-[#212121]">Cliente ID</p>
-                    </div>
-                    <p className="text-[#757575]">{ticketSeleccionado.cliente}</p>
+                {/* Controles de Gestión */}
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Asignar Técnico */}
+                  <div className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                    <label className="block text-[#212121] font-semibold mb-2">
+                      <UserCheck className="inline mr-2" size={18} />
+                      Asignar Técnico
+                    </label>
+                    <select
+                      value={ticketSeleccionado.asignado_a || ''}
+                      onChange={(e) => handleAsignarTecnico(e.target.value || null)}
+                      disabled={asignandoTecnico}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00BCD4] focus:outline-none transition text-[#212121] disabled:opacity-50"
+                    >
+                      <option value="">Sin asignar</option>
+                      {tecnicos.map(tec => (
+                        <option key={tec.id} value={tec.id}>
+                          {tec.first_name} {tec.last_name} ({tec.rol})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                    <div className="flex items-center gap-2 mb-1">
-                      <User className="text-[#00BCD4]" size={16} />
-                      <p className="font-semibold text-[#212121]">Asignado a</p>
-                    </div>
-                    <p className="text-[#757575]">
-                      {ticketSeleccionado.asignado_a || 'Sin asignar'}
-                    </p>
+                  {/* Cambiar Estado */}
+                  <div className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                    <label className="block text-[#212121] font-semibold mb-2">
+                      <CheckCircle className="inline mr-2" size={18} />
+                      Estado
+                    </label>
+                    <select
+                      value={ticketSeleccionado.estado}
+                      onChange={(e) => handleCambiarEstado(e.target.value)}
+                      disabled={cambiandoEstado}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00BCD4] focus:outline-none transition text-[#212121] disabled:opacity-50"
+                    >
+                      <option value="abierto">Abierto</option>
+                      <option value="en_proceso">En Proceso</option>
+                      <option value="resuelto">Resuelto</option>
+                      <option value="cerrado">Cerrado</option>
+                    </select>
                   </div>
 
-                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="text-[#00BCD4]" size={16} />
-                      <p className="font-semibold text-[#212121]">Fecha Creación</p>
-                    </div>
-                    <p className="text-[#757575]">
-                      {new Date(ticketSeleccionado.creado).toLocaleDateString('es-CO', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-[#E3F2FD] rounded-xl">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="text-[#00BCD4]" size={16} />
-                      <p className="font-semibold text-[#212121]">Última Actualización</p>
-                    </div>
-                    <p className="text-[#757575]">
-                      {new Date(ticketSeleccionado.actualizado).toLocaleDateString('es-CO', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                  {/* Cambiar Prioridad */}
+                  <div className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                    <label className="block text-[#212121] font-semibold mb-2">
+                      <AlertCircle className="inline mr-2" size={18} />
+                      Prioridad
+                    </label>
+                    <select
+                      value={ticketSeleccionado.prioridad}
+                      onChange={(e) => handleCambiarPrioridad(e.target.value)}
+                      disabled={cambiandoPrioridad}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#00BCD4] focus:outline-none transition text-[#212121] disabled:opacity-50"
+                    >
+                      <option value="baja">Baja</option>
+                      <option value="media">Media</option>
+                      <option value="alta">Alta</option>
+                      <option value="urgente">Urgente</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Botón Cerrar */}
-                <button
-                  onClick={() => setMostrarModal(false)}
-                  className="w-full bg-[#00BCD4] text-white py-3 rounded-full hover:bg-[#00ACC1] transition font-semibold"
-                >
-                  Cerrar
-                </button>
+                {/* Comentarios */}
+                <div className="border-t-2 border-gray-200 pt-6">
+                  <h3 className="text-xl font-bold text-[#212121] mb-4 flex items-center gap-2">
+                    <MessageSquare size={24} />
+                    Comentarios y Respuestas
+                  </h3>
+                  
+                  <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                    {comentarios.length === 0 ? (
+                      <div className="text-center py-8">
+                        <MessageSquare className="mx-auto text-[#757575] mb-2" size={48} />
+                        <p className="text-[#757575]">No hay comentarios aún</p>
+                      </div>
+                    ) : (
+                      comentarios.map((comentario) => (
+                        <div 
+                          key={comentario.id} 
+                          className={`p-4 rounded-xl ${comentario.es_interno ? 'bg-[#FFF3E0] border-2 border-[#FF9800]' : 'bg-[#F5F5F5]'}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-[#212121]">
+                                {comentario.usuario_nombre}
+                              </span>
+                              {comentario.es_interno && (
+                                <span className="px-2 py-0.5 bg-[#FF9800] text-white text-xs rounded-full">
+                                  Interno
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-[#757575]">
+                              {new Date(comentario.creado).toLocaleString('es-CO')}
+                            </span>
+                          </div>
+                          <p className="text-[#424242]">{comentario.comentario}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Input de comentario */}
+                  <form onSubmit={handleEnviarComentario} className="flex gap-3">
+                    <input
+                      type="text"
+                      value={nuevoComentario}
+                      onChange={(e) => setNuevoComentario(e.target.value)}
+                      placeholder="Escribe una respuesta al cliente..."
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-full focus:border-[#00BCD4] focus:outline-none transition text-[#212121]"
+                      disabled={enviandoComentario}
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="submit"
+                      disabled={!nuevoComentario.trim() || enviandoComentario}
+                      className="bg-[#00BCD4] text-white p-3 rounded-full hover:bg-[#00ACC1] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {enviandoComentario ? (
+                        <Loader2 className="animate-spin" size={20} />
+                      ) : (
+                        <Send size={20} />
+                      )}
+                    </motion.button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+                <div className="flex justify-between text-sm text-[#757575]">
+                  <span>Creado: {new Date(ticketSeleccionado.creado).toLocaleString('es-CO')}</span>
+                  <span>Actualizado: {new Date(ticketSeleccionado.actualizado).toLocaleString('es-CO')}</span>
+                </div>
               </div>
             </motion.div>
           </div>
         )}
-      </div>
+      </AnimatePresence>
     </AdminLayout>
   );
 }
