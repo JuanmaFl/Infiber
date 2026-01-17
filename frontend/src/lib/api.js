@@ -1,4 +1,4 @@
-const API_URL = 'https://86.48.21.76/infiber/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://infiber.duckdns.org/infiber/api';
 
 // ============ AUTENTICACIÓN ============
 export const login = async (username, password) => {
