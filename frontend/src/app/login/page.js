@@ -13,43 +13,40 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
       const data = await login(credentials.username, credentials.password);
       
-      // Guardar tokens con nombres consistentes
-      localStorage.setItem('access_token', data.access);
-      localStorage.setItem('refresh_token', data.refresh);
+      // Guardar información del usuario
+      const payload = JSON.parse(atob(data.access.split('.')[1]));
+      localStorage.setItem('user_id', payload.user_id);
       
-      // Decodificar JWT para obtener user_id
-      const tokenPayload = JSON.parse(atob(data.access.split('.')[1]));
-      localStorage.setItem('user_id', tokenPayload.user_id);
-      
-      // Obtener información del usuario para determinar el rol
-      const userResponse = await fetch(`https://86.48.21.76/infiber/api/usuarios/${tokenPayload.user_id}/`, {
+      // Obtener info del usuario
+      const userResponse = await fetch(`https://86.48.21.76/infiber/api/usuarios/${payload.user_id}/`, {
         headers: {
           'Authorization': `Bearer ${data.access}`,
-          'Content-Type': 'application/json'
-        }
+        },
       });
       
       const userData = await userResponse.json();
+      localStorage.setItem('user_rol', userData.rol);
       
-      console.log('🚀 Redirigiendo según rol:', userData.rol);
-      
-      // Redirigir según el rol
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      // Redireccionar según el rol
       if (userData.rol === 'admin' || userData.rol === 'superadmin') {
-        window.location.replace('/dashboard/admin');
+        router.push('/dashboard/admin');
       } else {
-        window.location.replace('/dashboard/cliente');
+        router.push('/dashboard/cliente');
       }
-      
     } catch (err) {
-      setError('Usuario o contraseña incorrectos');
+      if (err.message === 'USUARIO_BLOQUEADO') {
+        // Redirigir a la página de bloqueado
+        router.push('/bloqueado');
+      } else {
+        setError('Usuario o contraseña incorrectos');
+      }
+    } finally {
       setLoading(false);
     }
   };
