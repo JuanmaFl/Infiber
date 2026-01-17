@@ -2,34 +2,38 @@ from django.db import models
 from apps.facturas.models import Factura
 
 class Pago(models.Model):
-    METODOS = [
+    METODOS_PAGO = [
+        ('wompi_card', 'Tarjeta de Crédito/Débito (Wompi)'),
+        ('wompi_pse', 'PSE (Wompi)'),
+        ('wompi_nequi', 'Nequi (Wompi)'),
+        ('wompi_bancolombia', 'Transferencia Bancolombia (Wompi)'),
+        ('transferencia_bancaria', 'Transferencia Bancaria Manual'),
         ('efectivo', 'Efectivo'),
-        ('transferencia', 'Transferencia'),
-        ('tarjeta', 'Tarjeta'),
-        ('wompi', 'Wompi'),
-        ('payu', 'PayU'),
     ]
     
     ESTADOS = [
-        ('exitoso', 'Exitoso'),
         ('pendiente', 'Pendiente'),
-        ('fallido', 'Fallido'),
-        ('reembolsado', 'Reembolsado'),
+        ('aprobado', 'Aprobado'),
+        ('rechazado', 'Rechazado'),
+        ('error', 'Error'),
     ]
     
-    factura = models.ForeignKey(Factura, on_delete=models.CASCADE)
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='pagos')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
-    metodo = models.CharField(max_length=20, choices=METODOS)
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
-    referencia = models.CharField(max_length=100, blank=True)
-    referencia_externa = models.CharField(max_length=200, blank=True, help_text="ID de transacción de Wompi/PayU")
-    datos_respuesta = models.JSONField(blank=True, null=True, help_text="Respuesta completa del gateway")
+    metodo_pago = models.CharField(max_length=50, choices=METODOS_PAGO)
+    referencia_transaccion = models.CharField(max_length=200, null=True, blank=True)
     fecha_pago = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    
+    # Campos específicos de Wompi
+    wompi_transaction_id = models.CharField(max_length=200, null=True, blank=True, unique=True)
+    wompi_reference = models.CharField(max_length=200, null=True, blank=True)
+    wompi_payment_method_type = models.CharField(max_length=50, null=True, blank=True)
+    wompi_status = models.CharField(max_length=50, null=True, blank=True)
+    wompi_response = models.JSONField(null=True, blank=True)
     
     class Meta:
-        db_table = 'pagos'
-        verbose_name = 'Pago'
-        verbose_name_plural = 'Pagos'
+        ordering = ['-fecha_pago']
     
     def __str__(self):
-        return f"Pago {self.id} - {self.monto} - {self.estado}"
+        return f"Pago {self.id} - Factura {self.factura.numero_factura} - {self.estado}"

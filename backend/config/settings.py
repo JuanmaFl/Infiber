@@ -169,12 +169,31 @@ SIMPLE_JWT = {
 # OpenAI
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
 # Pagos
+# ======================
+# PASARELAS DE PAGO - WOMPI
+# ======================
+
+# Cargar variables desde .env
 WOMPI_PUBLIC_KEY = env('WOMPI_PUBLIC_KEY', default='')
+WOMPI_PRIVATE_KEY = env('WOMPI_PRIVATE_KEY', default='')
+WOMPI_EVENTS_SECRET = env('WOMPI_EVENTS_SECRET', default='')
+WOMPI_INTEGRITY_SECRET = env('WOMPI_INTEGRITY_SECRET', default='')
+WOMPI_ENVIRONMENT = env('WOMPI_ENVIRONMENT', default='test')
+
+# URLs de Wompi según el ambiente
+if WOMPI_ENVIRONMENT == 'production':
+    WOMPI_BASE_URL = 'https://production.wompi.co/v1'
+else:
+    WOMPI_BASE_URL = 'https://sandbox.wompi.co/v1'
+
+# Frontend URL (para redirects después del pago)
+FRONTEND_URL = env('FRONTEND_URL', default='http://86.48.21.76')
+
+# PayU (mantener por si acaso)
 PAYU_API_KEY = env('PAYU_API_KEY', default='')
 PAYU_API_LOGIN = env('PAYU_API_LOGIN', default='')
 PAYU_ACCOUNT_ID = env('PAYU_ACCOUNT_ID', default='')
-FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
-
+PAYU_MERCHANT_ID = env('PAYU_MERCHANT_ID', default='')
 # Email Configuration
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
