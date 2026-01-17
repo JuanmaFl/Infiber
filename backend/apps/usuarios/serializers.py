@@ -4,8 +4,15 @@ from .models import Usuario
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'rol', 'telefono', 'direccion', 'cedula']
-        read_only_fields = ['id']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
+                  'telefono', 'cedula', 'direccion', 'rol', 'is_active',
+                  'bloqueado', 'motivo_bloqueo', 'fecha_bloqueo']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'bloqueado': {'read_only': True},
+            'motivo_bloqueo': {'read_only': True},
+            'fecha_bloqueo': {'read_only': True}
+        }
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):
     class Meta:

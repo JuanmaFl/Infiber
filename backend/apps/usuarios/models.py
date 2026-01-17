@@ -15,6 +15,10 @@ class Usuario(AbstractUser):
     telefono = models.CharField(max_length=20, blank=True)
     direccion = models.TextField(blank=True)
     cedula = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    # Campo para bloquear usuarios
+    bloqueado = models.BooleanField(default=False, help_text='Usuario bloqueado por comportamiento inadecuado')
+    motivo_bloqueo = models.TextField(null=True, blank=True, help_text='Razón del bloqueo')
+    fecha_bloqueo = models.DateTimeField(null=True, blank=True)    
     
     class Meta:
         db_table = 'usuarios'
