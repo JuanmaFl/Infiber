@@ -44,6 +44,7 @@ class Command(BaseCommand):
                 # Bloquear usuario si no está bloqueado
                 if not cliente.bloqueado:
                     cliente.bloqueado = True
+                    cliente.is_active = False
                     cliente.motivo_bloqueo = f'Suspendido por mora - Factura {factura.numero_factura} ({dias_mora} días de retraso)'
                     cliente.fecha_bloqueo = timezone.now()
                     cliente.save()
