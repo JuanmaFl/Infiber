@@ -138,7 +138,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://86.48.21.76",
+    'https://infiber.duckdns.org',
     "http://localhost:3000",
+    
 ]
 # Para que funcione en /infiber/
 FORCE_SCRIPT_NAME = '/infiber'

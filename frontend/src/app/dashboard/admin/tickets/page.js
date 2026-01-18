@@ -44,7 +44,7 @@ export default function GestionTickets() {
       const token = localStorage.getItem('access_token');
       
       const [ticketsData, tecnicosData] = await Promise.all([
-        fetch('https://86.48.21.76/infiber/api/tickets/', {
+        fetch('https://infiber.duckdns.org/infiber/api/tickets/', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

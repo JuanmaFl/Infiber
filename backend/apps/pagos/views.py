@@ -334,58 +334,77 @@ def webhook_wompi(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def confirmar_pago_manual(request):
     """
-    Confirma un pago manual (transferencia o efectivo)
-    Solo para admins
+    Endpoint para que admins confirmen pagos manuales (presenciales).
+    Al confirmar, reactiva el contrato automáticamente.
     """
+    # Verificar permisos de admin
     if request.user.rol not in ['admin', 'superadmin']:
         return Response(
-            {'error': 'No tienes permiso para realizar esta acción'},
+            {'error': 'No tienes permisos para confirmar pagos'},
             status=status.HTTP_403_FORBIDDEN
         )
     
     factura_id = request.data.get('factura_id')
     monto = request.data.get('monto')
-    metodo_pago = request.data.get('metodo_pago')
-    referencia = request.data.get('referencia_transaccion')
-
-    if not all([factura_id, monto, metodo_pago]):
+    metodo_pago = request.data.get('metodo_pago', 'efectivo')
+    referencia = request.data.get('referencia', '')
+    
+    if not factura_id or not monto:
         return Response(
-            {'error': 'Factura, monto y método de pago son requeridos'},
+            {'error': 'factura_id y monto son requeridos'},
             status=status.HTTP_400_BAD_REQUEST
         )
-
+    
     try:
         factura = Factura.objects.get(id=factura_id)
         
-        # Crear el pago
+        if factura.estado != 'pendiente':
+            return Response(
+                {'error': f'Esta factura ya está {factura.estado}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Crear registro de pago
         pago = Pago.objects.create(
             factura=factura,
             monto=monto,
             metodo_pago=metodo_pago,
-            referencia_transaccion=referencia,
-            estado='aprobado'
+            estado='aprobado',
+            referencia_pago=referencia or f'MANUAL-{factura.numero_factura}'
         )
         
-        # Actualizar estado de la factura
+        # Marcar factura como pagada
         factura.estado = 'pagada'
         factura.save()
         
+        # 🟢 REACTIVAR CONTRATO SI ESTABA SUSPENDIDO
+        contrato = factura.contrato
+        if contrato.estado == 'suspendido':
+            contrato.reactivar()
+            
+            # Desbloquear usuario
+            cliente = contrato.cliente
+            if cliente.bloqueado:
+                cliente.bloqueado = False
+                cliente.motivo_bloqueo = None
+                cliente.fecha_bloqueo = None
+                cliente.save()
+        
         # Enviar email de confirmación
         try:
-            enviar_email_pago_confirmado(pago)
-            print(f"✅ Email de confirmación enviado para pago manual de factura {factura.numero_factura}")
+            enviar_email_pago_confirmado(factura, pago)
         except Exception as e:
-            print(f"⚠️ Error al enviar email: {e}")
+            print(f'Error enviando email: {e}')
         
         return Response({
             'success': True,
-            'message': 'Pago confirmado exitosamente',
-            'pago': PagoSerializer(pago).data
+            'mensaje': 'Pago confirmado exitosamente',
+            'pago_id': pago.id,
+            'contrato_reactivado': contrato.estado == 'activo'
         }, status=status.HTTP_201_CREATED)
         
     except Factura.DoesNotExist:
