@@ -18,21 +18,21 @@ export default function Login() {
 
     try {
       const data = await login(credentials.username, credentials.password);
-      
+
       // Guardar información del usuario
       const payload = JSON.parse(atob(data.access.split('.')[1]));
       localStorage.setItem('user_id', payload.user_id);
-      
+
       // Obtener info del usuario
       const userResponse = await fetch(`https://infiber.duckdns.org/infiber/api/usuarios/${payload.user_id}/`, {
         headers: {
           'Authorization': `Bearer ${data.access}`,
         },
       });
-      
+
       const userData = await userResponse.json();
       localStorage.setItem('user_rol', userData.rol);
-      
+
       // Redireccionar según el rol
       if (userData.rol === 'admin' || userData.rol === 'superadmin') {
         router.push('/dashboard/admin');
@@ -100,8 +100,8 @@ export default function Login() {
           </div>
 
           <div className="text-right">
-            <Link 
-              href="/recuperar-password" 
+            <Link
+              href="/recuperar-password"
               className="text-sm text-[#00BCD4] hover:underline"
             >
               ¿Olvidaste tu contraseña?
@@ -120,8 +120,8 @@ export default function Login() {
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <Link href="/registro" className="text-[#00BCD4] hover:underline block">
-            ¿No tienes cuenta? Regístrate
+          <Link href="/contratar" className="text-[#00BCD4] hover:underline block font-semibold">
+            ¿Quieres contratar nuestro servicio? Contratar Ahora
           </Link>
           <Link href="/" className="text-[#757575] hover:underline block text-sm">
             Volver al inicio

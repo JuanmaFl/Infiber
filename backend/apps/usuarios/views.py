@@ -22,13 +22,41 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        Permite crear usuarios sin autenticación (registro público)
-        Requiere autenticación para otras acciones
+        REGISTRO PÚBLICO DESHABILITADO
+        Solo admins pueden crear usuarios
         """
         if self.action == 'create':
-            return [AllowAny()]
+            # ⚠️ CAMBIO: Ya no permite AllowAny, solo IsAuthenticated
+            return [IsAuthenticated()]
         return [IsAuthenticated(), NoEstaBloqueado()]
-    
+
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescribir create para validar que solo admins pueden crear usuarios
+        """
+        # ⚠️ BLOQUEO DE REGISTRO PÚBLICO
+        if not request.user.is_authenticated:
+            return Response(
+                {
+                    'error': 'El registro público está deshabilitado.',
+                    'mensaje': 'Para contratar nuestro servicio, visita /contratar o contáctanos por WhatsApp.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Solo admins y superadmins pueden crear usuarios
+        if request.user.rol not in ['admin', 'superadmin']:
+            return Response(
+                {
+                    'error': 'No tienes permisos para crear usuarios.',
+                    'mensaje': 'Solo los administradores pueden crear cuentas de usuario.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Si es admin/superadmin, proceder normalmente
+        return super().create(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def bloquear(self, request, pk=None):
         """Bloquea un usuario"""
@@ -42,6 +70,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         motivo = request.data.get('motivo', 'Sin motivo especificado')
 
         usuario.bloqueado = True
+        usuario.is_active = False  # ⚠️ AGREGADO: Bloquear login
         usuario.motivo_bloqueo = motivo
         usuario.fecha_bloqueo = timezone.now()
         usuario.save()
@@ -62,6 +91,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         usuario = self.get_object()
         usuario.bloqueado = False
+        usuario.is_active = True  # ⚠️ AGREGADO: Reactivar login
         usuario.motivo_bloqueo = None
         usuario.fecha_bloqueo = None
         usuario.save()
@@ -282,7 +312,7 @@ def estadisticas_dashboard(request):
             {'error': 'No tienes permiso para ver estadísticas'},
             status=status.HTTP_403_FORBIDDEN
         )
-    
+
     from apps.contratos.models import Contrato
     from apps.facturas.models import Factura
     from apps.pagos.models import Pago
@@ -290,41 +320,41 @@ def estadisticas_dashboard(request):
     from django.db.models import Sum, Count, Q
     from datetime import datetime, timedelta
     from decimal import Decimal
-    
+
     # Clientes
     total_clientes = Usuario.objects.filter(rol='cliente').count()
     clientes_activos = Usuario.objects.filter(rol='cliente', bloqueado=False).count()
     clientes_bloqueados = Usuario.objects.filter(rol='cliente', bloqueado=True).count()
-    
+
     # Contratos
     contratos_activos = Contrato.objects.filter(estado='activo').count()
     contratos_suspendidos = Contrato.objects.filter(estado='suspendido').count()
     contratos_cancelados = Contrato.objects.filter(estado='cancelado').count()
-    
+
     # Facturas
     facturas_pendientes = Factura.objects.filter(estado='pendiente').count()
     facturas_pagadas = Factura.objects.filter(estado='pagada').count()
     facturas_vencidas = Factura.objects.filter(estado='vencida').count()
-    
+
     total_por_cobrar = Factura.objects.filter(estado='pendiente').aggregate(
         total=Sum('monto')
     )['total'] or Decimal('0')
-    
+
     # Pagos
     total_recaudado = Pago.objects.aggregate(total=Sum('monto'))['total'] or Decimal('0')
-    
+
     # Pagos del mes actual
     primer_dia_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     pagos_mes_actual = Pago.objects.filter(
         fecha_pago__gte=primer_dia_mes
     ).aggregate(total=Sum('monto'))['total'] or Decimal('0')
-    
+
     # Tickets
     tickets_abiertos = Ticket.objects.filter(estado='abierto').count()
     tickets_en_proceso = Ticket.objects.filter(estado='en_proceso').count()
     tickets_resueltos = Ticket.objects.filter(estado='resuelto').count()
     tickets_cerrados = Ticket.objects.filter(estado='cerrado').count()
-    
+
     # Ingresos por mes (últimos 6 meses)
     ingresos_mensuales = []
     for i in range(5, -1, -1):
@@ -335,22 +365,22 @@ def estadisticas_dashboard(request):
         else:
             siguiente_mes = inicio_mes + timedelta(days=32)
             fin_mes = siguiente_mes.replace(day=1) - timedelta(seconds=1)
-        
+
         total = Pago.objects.filter(
             fecha_pago__gte=inicio_mes,
             fecha_pago__lte=fin_mes
         ).aggregate(total=Sum('monto'))['total'] or Decimal('0')
-        
+
         ingresos_mensuales.append({
             'mes': inicio_mes.strftime('%b %Y'),
             'ingresos': float(total)
         })
-    
+
     # Tickets por tipo
     tickets_por_tipo = Ticket.objects.values('tipo').annotate(
         cantidad=Count('id')
     ).order_by('-cantidad')
-    
+
     return Response({
         'clientes': {
             'total': total_clientes,
