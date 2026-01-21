@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { 
-  Wifi, Zap, Shield, Users, Download, Upload, Clock, 
+import {
+  Wifi, Zap, Shield, Users, Download, Upload, Clock,
   Check, Star, MessageCircle, MapPin, Phone, Mail,
   ArrowRight, Globe, Award, Headphones
 } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function Home() {
       <nav className="fixed w-full bg-white/95 backdrop-blur-md z-50 shadow-sm border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="text-2xl font-bold text-[#00BCD4] flex items-center gap-2"
@@ -33,7 +33,7 @@ export default function Home() {
               <Wifi className="text-[#00BCD4]" size={28} />
               Infiber
             </motion.div>
-            
+
             <div className="hidden md:flex space-x-8 items-center">
               <a href="#planes" className="text-[#212121] hover:text-[#00BCD4] transition font-medium">Planes</a>
               <a href="#beneficios" className="text-[#212121] hover:text-[#00BCD4] transition font-medium">Beneficios</a>
@@ -44,7 +44,7 @@ export default function Home() {
 
             <div className="flex items-center gap-4">
               <Link href="/login">
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="text-[#00BCD4] font-semibold hover:text-[#00ACC1] transition"
@@ -52,13 +52,13 @@ export default function Home() {
                   Iniciar Sesión
                 </motion.button>
               </Link>
-              <Link href="/registro">
-                <motion.button 
+              <Link href="/contratar">
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-[#00BCD4] text-white px-6 py-2 rounded-full hover:bg-[#00ACC1] hover:shadow-lg transition font-semibold"
                 >
-                  Registrarse
+                  Contratar Ahora
                 </motion.button>
               </Link>
             </div>
@@ -117,7 +117,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl text-[#757575] mb-8 leading-relaxed">
-                La mejor conexión de fibra óptica para Palmitas, San Cristóbal y Robledo. 
+                La mejor conexión de fibra óptica para Palmitas, San Cristóbal y Robledo.
                 Velocidad real, sin interrupciones, sin sorpresas.
               </p>
 
@@ -325,7 +325,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.2 }}
-                whileHover={{ 
+                whileHover={{
                   y: -15,
                   boxShadow: "0 25px 50px -12px rgba(0, 188, 212, 0.3)"
                 }}
@@ -352,11 +352,11 @@ export default function Home() {
 
                   {/* Precio */}
                   <div className="mb-8">
-                    <div className="flex items-end gap-2">
-                      <span className="text-6xl font-bold text-[#00BCD4]">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-[#00BCD4]">
                         ${plan.precio.toLocaleString()}
                       </span>
-                      <span className="text-xl text-[#757575] mb-2">/mes</span>
+                      <span className="text-lg text-[#757575]">/mes</span>
                     </div>
                     <p className="text-sm text-[#757575] mt-2">IVA incluido • Sin permanencia</p>
                   </div>
@@ -407,13 +407,13 @@ export default function Home() {
                   </p>
 
                   {/* Botón */}
-                  <Link href="/registro">
+                  <Link href="/contratar">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className={`w-full py-4 rounded-full font-semibold transition flex items-center justify-center gap-2 ${
-                        index === 1 
-                          ? 'bg-[#00BCD4] text-white hover:bg-[#00ACC1] shadow-lg' 
+                        index === 1
+                          ? 'bg-[#00BCD4] text-white hover:bg-[#00ACC1] shadow-lg'
                           : 'bg-[#E3F2FD] text-[#00BCD4] hover:bg-[#00BCD4] hover:text-white'
                       }`}
                     >
@@ -433,7 +433,7 @@ export default function Home() {
             className="text-center mt-12"
           >
             <p className="text-[#757575]">
-              ¿Necesitas un plan personalizado? 
+              ¿Necesitas un plan personalizado?
               <a href="#contacto" className="text-[#00BCD4] font-semibold hover:underline ml-2">
                 Contáctanos
               </a>
@@ -936,7 +936,7 @@ export default function Home() {
               Únete a más de 100 familias que ya disfrutan del mejor internet de fibra óptica en Medellín
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/registro">
+              <Link href="/contratar">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
