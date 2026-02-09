@@ -25,8 +25,7 @@ environ.Env.read_env(BASE_DIR / '.env')
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = ['86.48.21.76','infiber.duckdns.org', 'localhost', '127.0.0.1']
-
+ALLOWED_HOSTS = ['86.48.21.76', 'infiber.duckdns.org', 'infiber.online', 'www.infiber.online', 'localhost', '127.0.0.1']
 
 # Application definition
 
@@ -137,11 +136,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://86.48.21.76",
-    'https://infiber.duckdns.org',
+    "https://86.48.21.76",
+    "https://infiber.duckdns.org",
+    "https://infiber.online",
+    "https://www.infiber.online",
     "http://localhost:3000",
-    
 ]
+    
 # Para que funcione en /infiber/
 FORCE_SCRIPT_NAME = '/infiber'
 STATIC_URL = '/infiber/static/'

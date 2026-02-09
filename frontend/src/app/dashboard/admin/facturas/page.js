@@ -20,7 +20,7 @@ export default function GestionFacturas() {
     try {
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('https://infiber.duckdns.org/infiber/api/facturas/', {
+      const response = await fetch('https://infiber.online/infiber/api/facturas/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -19,7 +19,7 @@ export default function GestionContratos() {
     try {
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('https://infiber.duckdns.org/infiber/api/contratos/', {
+      const response = await fetch('https://infiber.online/infiber/api/contratos/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

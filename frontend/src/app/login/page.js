@@ -24,7 +24,7 @@ export default function Login() {
       localStorage.setItem('user_id', payload.user_id);
 
       // Obtener info del usuario
-      const userResponse = await fetch(`https://infiber.duckdns.org/infiber/api/usuarios/${payload.user_id}/`, {
+      const userResponse = await fetch(`https://infiber.online/infiber/api/usuarios/${payload.user_id}/`, {
         headers: {
           'Authorization': `Bearer ${data.access}`,
         },

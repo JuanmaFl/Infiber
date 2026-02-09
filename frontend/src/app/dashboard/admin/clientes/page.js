@@ -66,7 +66,7 @@ export default function GestionClientes() {
     setLoadingHistorial(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://infiber.duckdns.org/infiber/api/usuarios/${clienteId}/historial/`, {
+      const response = await fetch(`https://infiber.online/infiber/api/usuarios/${clienteId}/historial/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -131,8 +131,8 @@ export default function GestionClientes() {
     try {
       const token = localStorage.getItem('access_token');
       const url = modoEdicion 
-        ? `https://infiber.duckdns.org/infiber/api/usuarios/${clienteSeleccionado.id}/`
-        : 'https://infiber.duckdns.org/infiber/api/usuarios/';
+        ? `https://infiber.online/infiber/api/usuarios/${clienteSeleccionado.id}/`
+        : 'https://infiber.online/infiber/api/usuarios/';
       
       const method = modoEdicion ? 'PATCH' : 'POST';
       
@@ -176,7 +176,7 @@ export default function GestionClientes() {
     setBloqueando(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://infiber.duckdns.org/infiber/api/usuarios/${clienteSeleccionado.id}/bloquear/`, {
+      const response = await fetch(`https://infiber.online/infiber/api/usuarios/${clienteSeleccionado.id}/bloquear/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -205,7 +205,7 @@ export default function GestionClientes() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://infiber.duckdns.org/infiber/api/usuarios/${clienteSeleccionado.id}/desbloquear/`, {
+      const response = await fetch(`https://infiber.online/infiber/api/usuarios/${clienteSeleccionado.id}/desbloquear/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

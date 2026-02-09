@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://infiber.duckdns.org/infiber/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://infiber.online/infiber/api';
 
 // ============ AUTENTICACIÓN ============
 export const login = async (username, password) => {
