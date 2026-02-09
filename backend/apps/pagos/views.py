@@ -11,7 +11,7 @@ from apps.facturas.utils import enviar_email_pago_confirmado
 from .wompi_service import WompiService
 
 # TEMPORAL - Modo desarrollo sin Wompi
-MODO_DESARROLLO = True  # Cambiar a False cuando Wompi funcione
+MODO_DESARROLLO = False  # Cambiar a False cuando Wompi funcione
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
